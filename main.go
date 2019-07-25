@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	notifier "github.com/Xrazik1/telegramBot/notifier"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
@@ -40,51 +41,50 @@ func contains(arr []string, str string) bool {
 	return false
  }
 
-func notifier(bot *tgbotapi.BotAPI, msg tgbotapi.MessageConfig){
-	notification := tgbotapi.NewMessage(int64(CONFIG.ChatID), CONFIG.Notification)
+// func notifier(bot *tgbotapi.BotAPI, msg tgbotapi.MessageConfig){
+// 	notification := tgbotapi.NewMessage(int64(CONFIG.ChatID), CONFIG.Notification)
 
-	timesArray := strings.Split(CONFIG.Time, ",")
+// 	timesArray := strings.Split(CONFIG.Time, ",")
 
-	for x := range time.Tick(time.Minute) {
-		dt := time.Now()
-		var currentTime string = dt.Format("15:04")
+// 	for x := range time.Tick(time.Minute) {
+// 		dt := time.Now()
+// 		var currentTime string = dt.Format("15:04")
 
-		if (contains(timesArray, currentTime)){
-			if (isNotifyWorking){
-				if (CONFIG.ImageFileId != ""){
-					url, err := bot.GetFileDirectURL(CONFIG.ImageFileId)
-					if err == nil {
-						image := tgbotapi.NewPhotoUpload(int64(CONFIG.ChatID), url)
-						image.FileID = CONFIG.ImageFileId
-						image.UseExisting = true
-						bot.Send(image)
-						sendNotification(notification, bot)
-					}else{
-						sendNotification(notification, bot)
-					}
-				}
-			}else{
-				sendNotification(notification, bot)
-			}
-		}else{
-			break;
-		}
-		fmt.Println(x)
-	}
-}
+// 		if (contains(timesArray, currentTime)){
+// 			if (isNotifyWorking){
+// 				if (CONFIG.ImageFileId != ""){
+// 					url, err := bot.GetFileDirectURL(CONFIG.ImageFileId)
+// 					if err == nil {
+// 						image := tgbotapi.NewPhotoUpload(int64(CONFIG.ChatID), url)
+// 						image.FileID = CONFIG.ImageFileId
+// 						image.UseExisting = true
+// 						bot.Send(image)
+// 						sendNotification(notification, bot)
+// 					}else{
+// 						sendNotification(notification, bot)
+// 					}
+// 				}
+// 			}
+// 		}else{
+// 			break;
+// 		}
+// 		fmt.Println(x)
+// 	}
+// }
 
-func startNotify(bot *tgbotapi.BotAPI, msg tgbotapi.MessageConfig){
-	isNotifyWorking = true;
-	msg.Text = "Бот запустил уведомления"
-	bot.Send(msg)
-	go notifier(bot, msg)
-}
+// func startNotify(bot *tgbotapi.BotAPI, msg tgbotapi.MessageConfig){
+// 	worker := notifier.NewWorker(time.Minute)
+// 	worker.Config = CONFIG
+// 	go worker.Run(bot, msg)
+// 	msg.Text = "Бот запустил уведомления"
+// 	bot.Send(msg)
+// }
 
-func stopNotify(bot *tgbotapi.BotAPI, msg tgbotapi.MessageConfig){
-	isNotifyWorking = false;
-	msg.Text = "Бот остановил уведомления"
-	bot.Send(msg)
-}
+// func stopNotify(bot *tgbotapi.BotAPI, msg tgbotapi.MessageConfig){
+// 	worker.Shutdown()
+// 	msg.Text = "Бот остановил уведомления"
+// 	bot.Send(msg)
+// }
 
 func isImageLoaded()(bool){
 	if(CONFIG.ImageFileId != "") {
@@ -328,6 +328,7 @@ func loadDataFromJson(){
 
 func main() {
 	loadDataFromJson()
+	worker := notifier.NewWorker(time.Minute)
 
 	bot, err := tgbotapi.NewBotAPI(TOKEN)
 	if err != nil {
@@ -360,34 +361,76 @@ func main() {
 				msg.Text = "Введите \n /setTime для установки времени отправки \n /setNotification для установки уведомления \n /showConfig для просмотра настроек \n /setChatID для установки username отслеживаемого чата \n /setNotificationImage для установки картинки объявления \n /startNotify для запуска уведомлений \n /stopNotify для остановки уведомлений"
 				bot.Send(msg)
 			case "setNotificationImage":
-				var repeat bool = true
-				for repeat{
-					repeat = setNotificationImage(updates, bot, msg)
+				if (worker.Working){
+					msg.Text = "Для изменения параметров остановите отправку уведомлений с помощью /stopNotify"
+					bot.Send(msg)
+				}else{
+					var repeat bool = true
+					for repeat{
+						repeat = setNotificationImage(updates, bot, msg)
+					}
 				}
+				
 			case "setTime":
-				var repeat bool = true
-				for repeat{
-					repeat = setTime(updates, bot, msg)
+				if (worker.Working){
+					msg.Text = "Для изменения параметров остановите отправку уведомлений с помощью /stopNotify"
+					bot.Send(msg)
+				}else{
+					var repeat bool = true
+					for repeat{
+						repeat = setTime(updates, bot, msg)
+					}	
 				}
+				
 			case "setNotification":
-				var repeat bool = true
-				for repeat{
-					repeat = setNotification(updates, bot, msg)
+				if (worker.Working){
+					msg.Text = "Для изменения параметров остановите отправку уведомлений с помощью /stopNotify"
+					bot.Send(msg)
+				}else{
+					var repeat bool = true
+					for repeat{
+						repeat = setNotification(updates, bot, msg)
+					}
 				}
+				
 			case "showConfig":
 				sendConfig(bot, msg)
 			case "setChatID":
-				var repeat bool = true
-				for repeat{
-					repeat = setChatID(updates, bot, msg)
+				if (worker.Working){
+					msg.Text = "Для изменения параметров остановите отправку уведомлений с помощью /stopNotify"
+					bot.Send(msg)
+				}else{
+					var repeat bool = true
+					for repeat{
+						repeat = setChatID(updates, bot, msg)
+					}
 				}
+				
 			case "startNotify":
-				startNotify(bot, msg)
+				if (worker.Working){
+					msg.Text = "Бот уже отправляет уведомления. Для остановки введите /stopNotify"
+					bot.Send(msg)	
+				}else{
+					worker = notifier.NewWorker(time.Minute)
+					worker.Config = CONFIG
+					go worker.Run(bot, msg)
+					msg.Text = "Бот запустил уведомления"
+					bot.Send(msg)
+				}
+	
+			case "stopNotify":
+				if (worker.Working){
+					worker.Shutdown()
+					msg.Text = "Бот остановил уведомления"
+					bot.Send(msg)
+				}else{
+					msg.Text = "Бот не работает. Для запуска введите /startNotify"
+					bot.Send(msg)	
+				}
 			case "start":
 				msg.Text = "Введите \n /setConfig для полной настройки бота \n /showConfig для просмотра настроек \n /setChatID для установки username отслеживаемого чата \n /setNotificationImage для установки картинки объявления \n /startNotify для запуска уведомлений \n /startNotify для остановки уведомлений"
 				bot.Send(msg)
-			case "stopNotify":
-				stopNotify(bot, msg)
+
 			default:
 				msg.Text = "Я не понимаю эту команду"
 				bot.Send(msg)
