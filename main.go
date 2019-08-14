@@ -41,50 +41,6 @@ func contains(arr []string, str string) bool {
 	return false
  }
 
-// func notifier(bot *tgbotapi.BotAPI, msg tgbotapi.MessageConfig){
-// 	notification := tgbotapi.NewMessage(int64(CONFIG.ChatID), CONFIG.Notification)
-
-// 	timesArray := strings.Split(CONFIG.Time, ",")
-
-// 	for x := range time.Tick(time.Minute) {
-// 		dt := time.Now()
-// 		var currentTime string = dt.Format("15:04")
-
-// 		if (contains(timesArray, currentTime)){
-// 			if (isNotifyWorking){
-// 				if (CONFIG.ImageFileId != ""){
-// 					url, err := bot.GetFileDirectURL(CONFIG.ImageFileId)
-// 					if err == nil {
-// 						image := tgbotapi.NewPhotoUpload(int64(CONFIG.ChatID), url)
-// 						image.FileID = CONFIG.ImageFileId
-// 						image.UseExisting = true
-// 						bot.Send(image)
-// 						sendNotification(notification, bot)
-// 					}else{
-// 						sendNotification(notification, bot)
-// 					}
-// 				}
-// 			}
-// 		}else{
-// 			break;
-// 		}
-// 		fmt.Println(x)
-// 	}
-// }
-
-// func startNotify(bot *tgbotapi.BotAPI, msg tgbotapi.MessageConfig){
-// 	worker := notifier.NewWorker(time.Minute)
-// 	worker.Config = CONFIG
-// 	go worker.Run(bot, msg)
-// 	msg.Text = "Бот запустил уведомления"
-// 	bot.Send(msg)
-// }
-
-// func stopNotify(bot *tgbotapi.BotAPI, msg tgbotapi.MessageConfig){
-// 	worker.Shutdown()
-// 	msg.Text = "Бот остановил уведомления"
-// 	bot.Send(msg)
-// }
 
 func isImageLoaded()(bool){
 	if(CONFIG.ImageFileId != "") {
@@ -252,13 +208,15 @@ func setNotificationImage(updates tgbotapi.UpdatesChannel, bot *tgbotapi.BotAPI,
 			}
 			
 			if (update.Message.Photo != nil){
-				url, err := bot.GetFileDirectURL((*update.Message.Photo)[2].FileID)
+				var highQualityImageId string = (*update.Message.Photo)[(len((*update.Message.Photo))-1)].FileID
+				fmt.Printf("%+v\n", update.Message.Photo)
+				url, err := bot.GetFileDirectURL(highQualityImageId)
 				if (err == nil){
 					var result bool = saveImage(url)
 					if (result == true){
 						msg.Text = "Картинка успешно добавлена к уведомлению"
 						bot.Send(msg)
-						setConfig(CONFIG.Time, CONFIG.Notification, CONFIG.ChatID, (*update.Message.Photo)[2].FileID)
+						setConfig(CONFIG.Time, CONFIG.Notification, CONFIG.ChatID, highQualityImageId)
 						return false
 					}else{
 						msg.Text = "Произошла ошибка во время загрузки картинки. Для выхода введите exit."
