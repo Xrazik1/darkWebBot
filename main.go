@@ -19,7 +19,7 @@ import (
 
 var CONFIG Config
 var isNotifyWorking bool
-const TOKEN = "892282901:AAHRs_-3BA_brHK-_Ui9sGVqdZkVZ35GnBM"
+const TOKEN = ""
 
 
 type Config struct {
